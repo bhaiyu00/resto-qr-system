@@ -92,9 +92,19 @@ export const CustomerLayout: React.FC = () => {
             <span>·</span>
             <span>Contactless Digital Dining</span>
           </div>
-          <div className="flex items-center gap-2 text-[11px] text-[#735A4B]">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Encrypted Server-Verified Table Session</span>
+          <div className="flex items-center gap-3 text-[11px] text-[#735A4B]">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Encrypted Server-Verified Table Session</span>
+            </span>
+            <span className="text-[#D0C2B5]">·</span>
+            <Link
+              to="/admin/login"
+              className="text-[#968072] hover:text-[#C85A32] transition-colors"
+              title="Restaurant Owner & Staff Login"
+            >
+              Staff Portal
+            </Link>
           </div>
         </div>
       </footer>

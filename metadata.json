@@ -1,0 +1,7 @@
+{
+  "name": "CozyBite — QR Restaurant Ordering",
+  "description": "Warm, café-inspired QR-based digital menu, real-time kitchen order management, and WhatsApp order tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

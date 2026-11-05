@@ -68,7 +68,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
       stopCamera();
       soundManager.playQRScanBeep();
 
-      const matched = AVAILABLE_TEST_TABLES.find(
+      const matched = availableTables.find(
         t => t.token === token || t.tableNumber.toLowerCase() === tableName?.toLowerCase()
       );
 
@@ -80,18 +80,15 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
         token: finalToken,
       });
 
-      if (onTableScanned) {
-        onTableScanned(tableDisplay);
-      }
-
-      // Navigate to the table route after short animation
+      // Quick snappy transition directly to the table menu
       setTimeout(() => {
         onClose();
         setScannedResult(null);
         navigate(`/menu/cozybite-cafe/table/${finalToken}`);
-      }, 900);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 300);
     },
-    [navigate, onClose, onTableScanned, stopCamera]
+    [availableTables, navigate, onClose, stopCamera]
   );
 
   // Parse raw text or URL to extract token

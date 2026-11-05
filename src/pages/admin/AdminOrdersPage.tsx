@@ -18,6 +18,7 @@ import {
 import { getSocket } from '../../utils/socket.ts';
 import { formatCurrency } from '../../utils/orderRules.ts';
 import { soundManager } from '../../utils/soundManager.ts';
+import { adminFetch } from '../../utils/adminApi.ts';
 
 export const AdminOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([]);
@@ -28,7 +29,7 @@ export const AdminOrdersPage: React.FC = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('/api/admin/orders', { credentials: 'include' });
+      const res = await adminFetch('/api/admin/orders');
       if (res.ok) {
         const data = await res.json();
         setOrders(data.orders || []);
@@ -67,10 +68,9 @@ export const AdminOrdersPage: React.FC = () => {
   const handleStatusChange = async (orderId: string, status: string) => {
     setUpdatingId(orderId);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+      const res = await adminFetch(`/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ status }),
       });
       if (res.ok) {
@@ -89,10 +89,9 @@ export const AdminOrdersPage: React.FC = () => {
   const handleAdjustPrepTime = async (orderId: string, currentMinutes: number, delta: number) => {
     const newMinutes = Math.max(5, currentMinutes + delta);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}/prep-time`, {
+      const res = await adminFetch(`/api/admin/orders/${orderId}/prep-time`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ minutes: newMinutes }),
       });
       if (res.ok) {

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext.tsx';
 import { getSocket } from '../utils/socket.ts';
+import { adminFetch } from '../utils/adminApi.ts';
 import { soundManager } from '../utils/soundManager.ts';
 
 export const AdminLayout: React.FC = () => {
@@ -51,7 +52,7 @@ export const AdminLayout: React.FC = () => {
     socket.on('new_order_placed', onNewOrder);
 
     // Initial fetch of active orders count
-    fetch('/api/admin/orders', { credentials: 'include' })
+    adminFetch('/api/admin/orders')
       .then(res => res.json())
       .then(data => {
         if (data.orders) {

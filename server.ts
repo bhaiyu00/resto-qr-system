@@ -49,7 +49,16 @@ interface AuthRequest extends Request {
 }
 
 const requireAdminAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const token = req.cookies?.cozybite_admin_token || req.headers.authorization?.split(' ')[1];
+  let token = req.cookies?.cozybite_admin_token;
+
+  if (!token && req.headers.authorization) {
+    const authHeader = req.headers.authorization.trim();
+    if (authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    } else {
+      token = authHeader;
+    }
+  }
 
   if (!token) {
     res.status(401).json({ error: 'Unauthorized: Admin authentication token required.' });
@@ -100,6 +109,30 @@ app.get('/api/public/verify-table/:restaurantSlug/:tableToken', (req: Request, r
       capacity: verified.table.capacity,
     },
   });
+});
+
+/**
+ * Public active tables list for table selection / simulated scanner
+ */
+app.get('/api/public/tables/:restaurantSlug', (req: Request, res: Response) => {
+  const { restaurantSlug } = req.params;
+  const restaurant = db.getRestaurantBySlug(restaurantSlug);
+
+  if (!restaurant) {
+    res.status(404).json({ error: 'Restaurant not found.' });
+    return;
+  }
+
+  const tables = db.getTablesForRestaurant(restaurant.id)
+    .filter(t => t.isActive)
+    .map(t => ({
+      tableNumber: t.tableNumber,
+      token: t.tableToken,
+      location: t.location,
+      capacity: t.capacity,
+    }));
+
+  res.json({ tables });
 });
 
 /**
@@ -250,7 +283,7 @@ app.post('/api/admin/login', (req: Request, res: Response) => {
 
   const admin = db.admins.find(a => a.email.toLowerCase() === email.toLowerCase().trim());
   if (!admin) {
-    res.status(401).json({ error: 'Invalid email or password.' });
+    res.status(401).json({ error: 'Invalid email or password. You can also create a new account below.' });
     return;
   }
 
@@ -272,16 +305,17 @@ app.post('/api/admin/login', (req: Request, res: Response) => {
     { expiresIn: '7d' }
   );
 
-  // Set HTTP-Only Cookie
+  // Set HTTP-Only Cookie with cross-site iframe compatibility
   res.cookie('cozybite_admin_token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: true,
+    sameSite: 'none',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.json({
     success: true,
+    token,
     user: {
       id: admin.id,
       restaurantId: admin.restaurantId,
@@ -293,10 +327,74 @@ app.post('/api/admin/login', (req: Request, res: Response) => {
 });
 
 /**
+ * Create First / New Admin Account
+ */
+app.post('/api/admin/register', (req: Request, res: Response) => {
+  const { name, email, password, restaurantName } = req.body;
+
+  if (!name || name.trim().length < 2) {
+    res.status(400).json({ error: 'Please enter your full name (minimum 2 characters).' });
+    return;
+  }
+
+  if (!email || !email.includes('@') || email.trim().length < 5) {
+    res.status(400).json({ error: 'Please enter a valid email address.' });
+    return;
+  }
+
+  if (!password || password.length < 6) {
+    res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+    return;
+  }
+
+  try {
+    const { admin, restaurant } = db.registerAdmin(name, email, password, restaurantName);
+
+    const token = jwt.sign(
+      {
+        adminId: admin.id,
+        restaurantId: admin.restaurantId,
+        role: admin.role,
+        email: admin.email,
+        name: admin.name,
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.cookie('cozybite_admin_token', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        id: admin.id,
+        restaurantId: admin.restaurantId,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+      },
+      restaurant,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to create admin account.';
+    res.status(400).json({ error: msg });
+  }
+});
+
+/**
  * Admin Logout
  */
 app.post('/api/admin/logout', (req: Request, res: Response) => {
-  res.clearCookie('cozybite_admin_token');
+  res.clearCookie('cozybite_admin_token', {
+    sameSite: 'none',
+    secure: true,
+  });
   res.json({ success: true, message: 'Logged out successfully.' });
 });
 

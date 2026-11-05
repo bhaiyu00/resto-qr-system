@@ -144,19 +144,20 @@ export const CustomerMenuPage: React.FC = () => {
 
   // Handle scanned table redirect
   const handleScannedTable = (detected: string) => {
-    // Map table number (e.g. "Table 01", "Table 06") to its unique token
-    const tableTokenMap: Record<string, string> = {
-      'table 01': 'tok-tbl-01-a8f9',
-      'table 02': 'tok-tbl-02-c4d1',
-      'table 03': 'tok-tbl-03-e7a2',
-      'table 04': 'tok-tbl-04-f9b8',
-      'table 05': 'tok-tbl-05-3e2c',
-      'table 06': 'tok-tbl-06-8d1a',
-      'table 07': 'tok-tbl-07-5b4e',
-      'table 08': 'tok-tbl-08-9f0d',
-    };
-
-    const token = tableTokenMap[detected.toLowerCase()] || `tok-${detected.toLowerCase().replace(/\s+/g, '-')}`;
+    let token = detected;
+    if (!detected.startsWith('tok-')) {
+      const tableTokenMap: Record<string, string> = {
+        'table 01': 'tok-tbl-01-a8f9',
+        'table 02': 'tok-tbl-02-c4d1',
+        'table 03': 'tok-tbl-03-e7a2',
+        'table 04': 'tok-tbl-04-f9b8',
+        'table 05': 'tok-tbl-05-3e2c',
+        'table 06': 'tok-tbl-06-8d1a',
+        'table 07': 'tok-tbl-07-5b4e',
+        'table 08': 'tok-tbl-08-9f0d',
+      };
+      token = tableTokenMap[detected.toLowerCase()] || detected;
+    }
     navigate(`/menu/${restaurantSlug}/table/${token}`);
   };
 
@@ -170,38 +171,8 @@ export const CustomerMenuPage: React.FC = () => {
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
         <div className="w-10 h-10 border-3 border-[#C85A32] border-t-transparent rounded-full animate-spin mb-3" />
         <p className="text-xs font-semibold text-[#8D6E5C]">
-          Verifying Table QR Session...
+          Loading Verified Food Menu...
         </p>
-      </div>
-    );
-  }
-
-  // INVALID OR DISABLED TABLE TOKEN SCREEN
-  if (tokenError) {
-    return (
-      <div className="max-w-lg mx-auto py-16 px-4 text-center">
-        <div className="w-16 h-16 rounded-3xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-4 shadow-sm">
-          <AlertTriangle className="w-8 h-8" />
-        </div>
-        <h2 className="font-display text-2xl font-bold text-[#34241B] mb-2">
-          Invalid or Disabled Table QR
-        </h2>
-        <p className="text-xs text-[#6A4D3B] leading-relaxed mb-6 max-w-sm mx-auto">
-          {tokenError} Please point your phone camera at an active CozyBite table standee to begin ordering.
-        </p>
-        <button
-          onClick={() => setIsScannerOpen(true)}
-          className="px-5 py-3 rounded-xl bg-[#C85A32] text-white text-xs font-semibold hover:bg-[#B34E29] shadow-sm flex items-center gap-2 mx-auto"
-        >
-          <Camera className="w-4 h-4" />
-          <span>Scan Active Table QR</span>
-        </button>
-
-        <QRScannerModal
-          isOpen={isScannerOpen}
-          onClose={() => setIsScannerOpen(false)}
-          onTableScanned={handleScannedTable}
-        />
       </div>
     );
   }
@@ -209,8 +180,27 @@ export const CustomerMenuPage: React.FC = () => {
   return (
     <div className="min-h-screen pb-28 md:pb-16">
       
+      {/* Non-Blocking Informational Banner if table token needs attention */}
+      {tokenError && (
+        <div className="bg-amber-50 border-b border-amber-200 py-3 px-4">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-amber-900">
+            <div className="flex items-center gap-2 text-left">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{tokenError} Browse our full menu below, or scan your table's QR standee to connect directly to your table.</span>
+            </div>
+            <button
+              onClick={() => setIsScannerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C85A32] text-white font-semibold hover:bg-[#B34E29] transition-colors whitespace-nowrap"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Scan Active Table QR</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table Greeting Banner / Scan QR Prompt */}
-      {!tableToken && (
+      {!tableToken && !tokenError && (
         <div className="bg-[#FAF2EB] border-b border-[#E8DFD5] py-2.5 px-4 text-center">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 text-xs text-[#7A5641]">
             <span>Sitting at a table? Scan your table's QR standee for automatic ordering:</span>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Camera, Upload, CheckCircle2, QrCode, AlertCircle, Sparkles } from 'lucide-react';
+import { X, Camera, CheckCircle2, QrCode, AlertCircle, Sparkles } from 'lucide-react';
 import jsQR from 'jsqr';
 import { soundManager } from '../../utils/soundManager.ts';
 
@@ -12,12 +12,12 @@ interface QRScannerModalProps {
 
 const AVAILABLE_TEST_TABLES = [
   { tableNumber: 'Table 01', token: 'tok-tbl-01-a8f9', location: 'Window Bay', capacity: 2 },
-  { tableNumber: 'Table 02', token: 'tok-tbl-02-b3c1', location: 'Garden Patio', capacity: 4 },
-  { tableNumber: 'Table 03', token: 'tok-tbl-03-e4d2', location: 'Main Dining', capacity: 4 },
+  { tableNumber: 'Table 02', token: 'tok-tbl-02-c4d1', location: 'Garden Patio', capacity: 4 },
+  { tableNumber: 'Table 03', token: 'tok-tbl-03-e7a2', location: 'Main Dining', capacity: 4 },
   { tableNumber: 'Table 04', token: 'tok-tbl-04-f9b8', location: 'Corner Booth', capacity: 6 },
-  { tableNumber: 'Table 05', token: 'tok-tbl-05-c7e3', location: 'Espresso Bar', capacity: 2 },
+  { tableNumber: 'Table 05', token: 'tok-tbl-05-3e2c', location: 'Espresso Bar', capacity: 2 },
   { tableNumber: 'Table 06', token: 'tok-tbl-06-8d1a', location: 'Terrace View', capacity: 4 },
-  { tableNumber: 'Table 07', token: 'tok-tbl-07-1a2b', location: 'Courtyard', capacity: 4 },
+  { tableNumber: 'Table 07', token: 'tok-tbl-07-5b4e', location: 'Courtyard', capacity: 4 },
   { tableNumber: 'Table 08', token: 'tok-tbl-08-9f0d', location: 'Mezzanine', capacity: 8 },
 ];
 
@@ -26,14 +26,28 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const [scanMode, setScanMode] = useState<'camera' | 'upload' | 'simulate'>('simulate');
+  const [availableTables, setAvailableTables] = useState(AVAILABLE_TEST_TABLES);
+  const [scanMode, setScanMode] = useState<'camera' | 'simulate'>('simulate');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scannedResult, setScannedResult] = useState<{ table: string; token: string } | null>(null);
+
+  // Fetch live tables from server
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/public/tables/cozybite-cafe')
+        .then(res => res.json())
+        .then(data => {
+          if (data.tables && data.tables.length > 0) {
+            setAvailableTables(data.tables);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   // Stop camera stream helper
   const stopCamera = useCallback(() => {
@@ -165,48 +179,13 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
       console.warn('Camera error:', err);
       setCameraError(
         err.name === 'NotAllowedError'
-          ? 'Camera permission was denied. Try uploading a QR image or select a simulated table.'
+          ? 'Camera permission was denied. Please allow camera access in browser settings or choose a table below.'
           : 'Could not activate camera. Please select a table from the test simulation list.'
       );
       setScanMode('simulate');
       setIsScanning(false);
     }
   }, [stopCamera, tick]);
-
-  // File Upload Handler
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = event => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-        if (code && code.data) {
-          const detectedToken = parseTokenFromRaw(code.data);
-          if (detectedToken) {
-            handleSuccessToken(detectedToken);
-          } else {
-            alert('Scanned QR code did not match a valid CozyBite restaurant table.');
-          }
-        } else {
-          alert('Could not find a recognizable QR code in the uploaded image.');
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  };
 
   useEffect(() => {
     if (isOpen && scanMode === 'camera') {
@@ -244,8 +223,8 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
           </button>
         </div>
 
-        {/* Mode Selector Tabs */}
-        <div className="grid grid-cols-3 p-1.5 mx-4 mt-3 bg-[#EFE9E1] rounded-2xl text-xs font-semibold text-[#6A4D3B]">
+        {/* Mode Selector Tabs (2 Modes: Simulated Standees & Live Camera) */}
+        <div className="grid grid-cols-2 p-1.5 mx-4 mt-3 bg-[#EFE9E1] rounded-2xl text-xs font-semibold text-[#6A4D3B]">
           <button
             onClick={() => setScanMode('simulate')}
             className={`py-1.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
@@ -262,16 +241,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
             }`}
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>Camera</span>
-          </button>
-          <button
-            onClick={() => setScanMode('upload')}
-            className={`py-1.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-              scanMode === 'upload' ? 'bg-white text-[#C85A32] shadow-xs' : 'hover:text-[#34241B]'
-            }`}
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Upload</span>
+            <span>Live Camera</span>
           </button>
         </div>
 
@@ -318,7 +288,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
                 Align table QR standee inside the box to connect.
               </p>
             </div>
-          ) : scanMode === 'simulate' ? (
+          ) : (
             <div className="space-y-3">
               <div className="p-2.5 rounded-xl bg-white border border-[#E8DFD5] text-xs text-[#6A4D3B]">
                 <span className="font-semibold text-[#34241B] block mb-0.5">
@@ -328,7 +298,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
               </div>
 
               <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-0.5">
-                {AVAILABLE_TEST_TABLES.map(table => (
+                {availableTables.map(table => (
                   <button
                     key={table.token}
                     onClick={() => handleSuccessToken(table.token, table.tableNumber)}
@@ -347,39 +317,6 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
                     </span>
                   </button>
                 ))}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4 text-center py-4">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-[#D5C3B3] hover:border-[#C85A32] rounded-2xl p-6 bg-white cursor-pointer transition-colors space-y-2"
-              >
-                <div className="w-10 h-10 rounded-xl bg-[#FAF2EB] text-[#C85A32] flex items-center justify-center mx-auto">
-                  <Upload className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-display font-bold text-xs text-[#34241B]">
-                    Choose or Drop QR Image
-                  </h4>
-                  <p className="text-[11px] text-[#8D6E5C] mt-0.5">
-                    Upload a screenshot or photo of any table QR code.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 bg-[#C85A32] text-white rounded-lg text-xs font-semibold shadow-xs"
-                >
-                  Browse Files
-                </button>
               </div>
             </div>
           )}

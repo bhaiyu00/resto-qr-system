@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext.tsx';
+import { adminFetch } from '../../utils/adminApi.ts';
 
 interface TableWithQR {
   id: string;
@@ -47,7 +48,7 @@ export const AdminTablesPage: React.FC = () => {
 
   const fetchTables = async () => {
     try {
-      const res = await fetch('/api/admin/tables', { credentials: 'include' });
+      const res = await adminFetch('/api/admin/tables');
       if (res.ok) {
         const data = await res.json();
         const rawTables: TableWithQR[] = data.tables || [];
@@ -87,10 +88,9 @@ export const AdminTablesPage: React.FC = () => {
   const handleAddTable = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/tables', {
+      const res = await adminFetch('/api/admin/tables', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(newTable),
       });
       if (res.ok) {
@@ -104,9 +104,8 @@ export const AdminTablesPage: React.FC = () => {
 
   const toggleTableStatus = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/tables/${id}/toggle-status`, {
+      const res = await adminFetch(`/api/admin/tables/${id}/toggle-status`, {
         method: 'PATCH',
-        credentials: 'include',
       });
       if (res.ok) {
         setTables(prev =>

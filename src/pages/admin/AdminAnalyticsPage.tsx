@@ -11,13 +11,14 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/orderRules.ts';
+import { adminFetch } from '../../utils/adminApi.ts';
 
 export const AdminAnalyticsPage: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin/analytics', { credentials: 'include' })
+    adminFetch('/api/admin/analytics')
       .then(res => res.json())
       .then(d => setData(d))
       .catch(err => console.error(err))

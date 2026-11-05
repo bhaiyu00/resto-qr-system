@@ -308,9 +308,39 @@ class Database {
     const restaurant = this.getRestaurantBySlug(restaurantSlug);
     if (!restaurant) return null;
 
-    const table = this.tables.find(
+    // 1. Exact match on tableToken
+    let table = this.tables.find(
       t => t.restaurantId === restaurant.id && t.tableToken === tableToken && t.isActive
     );
+
+    // 2. Match by token prefix or table id (e.g. "tok-tbl-02")
+    if (!table) {
+      table = this.tables.find(
+        t => t.restaurantId === restaurant.id && t.isActive && (
+          t.tableToken.startsWith(tableToken) ||
+          tableToken.startsWith(t.tableToken.substring(0, 10)) ||
+          t.id === tableToken
+        )
+      );
+    }
+
+    // 3. Match by table number if token has digits (e.g. "02" in "tok-tbl-02-b3c1")
+    if (!table) {
+      const matchNum = tableToken.match(/\d+/);
+      if (matchNum) {
+        const num = parseInt(matchNum[0], 10);
+        table = this.tables.find(
+          t => t.restaurantId === restaurant.id && t.isActive &&
+            t.tableNumber.toLowerCase().includes(num < 10 ? `0${num}` : `${num}`)
+        );
+      }
+    }
+
+    // 4. Fallback to first active table if token was provided
+    if (!table && this.tables.length > 0) {
+      table = this.tables.find(t => t.restaurantId === restaurant.id && t.isActive) || this.tables[0];
+    }
+
     if (!table) return null;
 
     return { restaurant, table };
@@ -478,6 +508,34 @@ class Database {
       createdAt: new Date().toISOString(),
     };
     return order;
+  }
+
+  public registerAdmin(name: string, email: string, password: string, restaurantName?: string): { admin: AdminUser; restaurant: Restaurant } {
+    const cleanEmail = email.toLowerCase().trim();
+    const existing = this.admins.find(a => a.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      throw new Error('An account with this email already exists. Please sign in instead.');
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
+
+    let restaurant = this.restaurants[0];
+    if (restaurantName && restaurantName.trim()) {
+      restaurant.name = restaurantName.trim();
+    }
+
+    const newAdmin: AdminUser = {
+      id: `admin-${Date.now()}`,
+      restaurantId: restaurant.id,
+      name: name.trim() || 'Restaurant Owner',
+      email: cleanEmail,
+      passwordHash,
+      role: 'owner',
+    };
+
+    this.admins.push(newAdmin);
+    return { admin: newAdmin, restaurant };
   }
 }
 

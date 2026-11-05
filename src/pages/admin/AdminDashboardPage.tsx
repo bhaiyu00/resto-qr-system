@@ -16,6 +16,7 @@ import {
 import { useAdminAuth } from '../../context/AdminAuthContext.tsx';
 import { getSocket } from '../../utils/socket.ts';
 import { formatCurrency } from '../../utils/orderRules.ts';
+import { adminFetch } from '../../utils/adminApi.ts';
 
 export const AdminDashboardPage: React.FC = () => {
   const { user, restaurant } = useAdminAuth();
@@ -26,8 +27,8 @@ export const AdminDashboardPage: React.FC = () => {
   const loadData = async () => {
     try {
       const [analyticsRes, ordersRes] = await Promise.all([
-        fetch('/api/admin/analytics', { credentials: 'include' }),
-        fetch('/api/admin/orders', { credentials: 'include' }),
+        adminFetch('/api/admin/analytics'),
+        adminFetch('/api/admin/orders'),
       ]);
 
       if (analyticsRes.ok) {

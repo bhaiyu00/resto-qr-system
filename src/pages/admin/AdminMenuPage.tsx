@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/orderRules.ts';
+import { adminFetch } from '../../utils/adminApi.ts';
 
 export const AdminMenuPage: React.FC = () => {
   const [items, setItems] = useState<any[]>([]);
@@ -36,7 +37,7 @@ export const AdminMenuPage: React.FC = () => {
 
   const fetchMenu = async () => {
     try {
-      const res = await fetch('/api/admin/menu', { credentials: 'include' });
+      const res = await adminFetch('/api/admin/menu');
       if (res.ok) {
         const data = await res.json();
         setItems(data.items || []);
@@ -84,10 +85,9 @@ export const AdminMenuPage: React.FC = () => {
     e.preventDefault();
     try {
       if (editingItem) {
-        const res = await fetch(`/api/admin/menu/${editingItem.id}`, {
+        const res = await adminFetch(`/api/admin/menu/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify(form),
         });
         if (res.ok) {
@@ -96,10 +96,9 @@ export const AdminMenuPage: React.FC = () => {
           setIsModalOpen(false);
         }
       } else {
-        const res = await fetch('/api/admin/menu', {
+        const res = await adminFetch('/api/admin/menu', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify(form),
         });
         if (res.ok) {
@@ -115,9 +114,8 @@ export const AdminMenuPage: React.FC = () => {
 
   const toggleAvailability = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/menu/${id}/toggle-availability`, {
+      const res = await adminFetch(`/api/admin/menu/${id}/toggle-availability`, {
         method: 'PATCH',
-        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
@@ -131,9 +129,8 @@ export const AdminMenuPage: React.FC = () => {
   const deleteItem = async (id: string) => {
     if (!window.confirm('Are you sure you want to remove this dish from the menu?')) return;
     try {
-      const res = await fetch(`/api/admin/menu/${id}`, {
+      const res = await adminFetch(`/api/admin/menu/${id}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       if (res.ok) {
         setItems(prev => prev.filter(i => i.id !== id));

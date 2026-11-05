@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, CheckCircle2, Store, Percent, Clock, AlertCircle } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext.tsx';
+import { adminFetch } from '../../utils/adminApi.ts';
 
 export const AdminSettingsPage: React.FC = () => {
   const { restaurant, refreshAuth } = useAdminAuth();
@@ -37,10 +38,9 @@ export const AdminSettingsPage: React.FC = () => {
     setIsSaved(false);
 
     try {
-      const res = await fetch('/api/admin/settings', {
+      const res = await adminFetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(form),
       });
 

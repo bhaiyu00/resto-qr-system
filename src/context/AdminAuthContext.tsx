@@ -29,6 +29,7 @@ interface AdminAuthContextType {
   isLoading: boolean;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<boolean>;
+  setAuthSession: (token: string, user: AdminUser, restaurant?: RestaurantInfo) => void;
 }
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
@@ -41,15 +42,26 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const checkAuth = async (): Promise<boolean> => {
     try {
+      const token = localStorage.getItem('cozybite_admin_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch('/api/admin/me', {
+        headers,
         credentials: 'include',
       });
+
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
         setRestaurant(data.restaurant);
         return true;
       } else {
+        if (res.status === 401) {
+          localStorage.removeItem('cozybite_admin_token');
+        }
         setUser(null);
         setRestaurant(null);
         return false;
@@ -63,19 +75,33 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const setAuthSession = (token: string, newUser: AdminUser, newRestaurant?: RestaurantInfo) => {
+    localStorage.setItem('cozybite_admin_token', token);
+    setUser(newUser);
+    if (newRestaurant) {
+      setRestaurant(newRestaurant);
+    }
+  };
+
   useEffect(() => {
     checkAuth();
   }, []);
 
   const logout = async () => {
     try {
+      const token = localStorage.getItem('cozybite_admin_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       await fetch('/api/admin/logout', {
         method: 'POST',
+        headers,
         credentials: 'include',
       });
     } catch (e) {
       console.error('Logout error:', e);
     } finally {
+      localStorage.removeItem('cozybite_admin_token');
       setUser(null);
       setRestaurant(null);
       navigate('/admin/login', { replace: true });
@@ -90,6 +116,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isLoading,
         logout,
         refreshAuth: checkAuth,
+        setAuthSession,
       }}
     >
       {children}

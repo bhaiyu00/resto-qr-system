@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Tags, UtensilsCrossed, ArrowRight, Plus, Check } from 'lucide-react';
+import { adminFetch } from '../../utils/adminApi.ts';
 
 export const AdminCategoriesPage: React.FC = () => {
   const [categories, setCategories] = useState<{ name: string; count: number; description: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin/menu', { credentials: 'include' })
+    adminFetch('/api/admin/menu')
       .then(res => res.json())
       .then(data => {
         const items = data.items || [];
